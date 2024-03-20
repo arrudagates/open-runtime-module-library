@@ -1,4 +1,3 @@
-use frame_support::dispatch::DispatchError;
 use frame_support::traits::tokens::{Fortitude, Precision, Preservation, Provenance};
 use frame_support::traits::{
 	fungible, fungibles,
@@ -6,6 +5,7 @@ use frame_support::traits::{
 	Contains, Get,
 };
 use sp_arithmetic::{traits::Bounded, ArithmeticError};
+use sp_runtime::DispatchError;
 
 pub struct Combiner<AccountId, TestKey, A, B>(sp_std::marker::PhantomData<(AccountId, TestKey, A, B)>);
 
@@ -102,6 +102,7 @@ where
 	TestKey: Contains<<B as fungibles::Inspect<AccountId>>::AssetId>,
 	A: fungible::Mutate<AccountId, Balance = <B as fungibles::Inspect<AccountId>>::Balance>,
 	B: fungibles::Mutate<AccountId>,
+	AccountId: Eq,
 {
 	fn mint_into(
 		asset: Self::AssetId,
@@ -149,6 +150,7 @@ where
 	TestKey: Contains<<B as fungibles::Inspect<AccountId>>::AssetId>,
 	A: fungible::Mutate<AccountId, Balance = <B as fungibles::Inspect<AccountId>>::Balance>,
 	B: fungibles::Mutate<AccountId>,
+	AccountId: Eq,
 {
 	fn handle_dust(_dust: fungibles::Dust<AccountId, Self>) {
 		// FIXME: only way to access internals of Dust is into_credit, but T is
@@ -280,6 +282,7 @@ where
 	>,
 	B: BalanceT,
 	GetCurrencyId: Get<<T as fungibles::Inspect<AccountId>>::AssetId>,
+	AccountId: Eq,
 {
 	fn mint_into(dest: &AccountId, amount: Self::Balance) -> Result<Self::Balance, DispatchError> {
 		T::mint_into(

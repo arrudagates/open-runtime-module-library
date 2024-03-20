@@ -4,15 +4,9 @@
 
 use super::*;
 use frame_benchmarking::account;
-use frame_support::{
-	assert_err, assert_ok, construct_runtime, ensure,
-	traits::{ConstU32, Everything},
-};
+use frame_support::{assert_err, assert_ok, construct_runtime, derive_impl, ensure};
 use frame_system::RawOrigin;
-use sp_runtime::{
-	testing::{Header, H256},
-	traits::{BlakeTwo256, IdentityLookup},
-};
+use sp_runtime::{testing::Header, traits::IdentityLookup, BuildStorage};
 use sp_std::prelude::*;
 pub use test::*;
 
@@ -52,31 +46,12 @@ pub mod test {
 
 type AccountId = u128;
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
-	type RuntimeOrigin = RuntimeOrigin;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type RuntimeCall = RuntimeCall;
-	type Hashing = BlakeTwo256;
+	type Nonce = u64;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = ();
-	type DbWeight = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type BaseCallFilter = Everything;
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = ConstU32<16>;
+	type Block = Block;
 }
 
 impl Config for Test {}
@@ -85,21 +60,17 @@ pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
 pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, RuntimeCall, u32, ()>;
 
 construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-		Pallet: test::{Pallet, Call, Storage},
+	pub enum Test {
+		System: frame_system,
+		Pallet: test,
 	}
 );
 
 // This function basically just builds a genesis storage key/value store
 // according to our desired mockup.
 fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
+	frame_system::GenesisConfig::<Test>::default()
+		.build_storage()
 		.unwrap()
 		.into()
 }

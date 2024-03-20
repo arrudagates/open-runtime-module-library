@@ -40,9 +40,8 @@
 
 pub use crate::imbalances::{NegativeImbalance, PositiveImbalance};
 
-use codec::MaxEncodedLen;
 use frame_support::{
-	ensure, log,
+	ensure,
 	pallet_prelude::*,
 	traits::{
 		tokens::{
@@ -57,6 +56,7 @@ use frame_support::{
 	transactional, BoundedVec,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
+use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
@@ -425,12 +425,14 @@ pub mod module {
 
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			GenesisConfig { balances: vec![] }
+			GenesisConfig {
+				balances: Default::default(),
+			}
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			// ensure no duplicates exist.
 			let unique_endowed_accounts = self
@@ -466,7 +468,7 @@ pub mod module {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -1209,7 +1211,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
 
 		// slash free balance
 		if !free_slashed_amount.is_zero() {
-			// Cannot underflow becuase free_slashed_amount can never be greater than
+			// Cannot underflow because free_slashed_amount can never be greater than
 			// account.free but just to be defensive here.
 			Self::set_free_balance(
 				currency_id,
@@ -1274,7 +1276,7 @@ impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
-	type Moment = T::BlockNumber;
+	type Moment = BlockNumberFor<T>;
 
 	// Set a lock on the balance of `who` under `currency_id`.
 	// Is a no-op if lock amount is zero.
@@ -1328,9 +1330,18 @@ impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
 			.into_iter()
 			.filter_map(|lock| {
 				if lock.id == lock_id {
-					new_lock.take().map(|nl| BalanceLock {
-						id: lock.id,
-						amount: lock.amount.max(nl.amount),
+					new_lock.take().map(|nl| {
+						let new_amount = lock.amount.max(nl.amount);
+						Self::deposit_event(Event::LockSet {
+							lock_id,
+							currency_id,
+							who: who.clone(),
+							amount: new_amount,
+						});
+						BalanceLock {
+							id: lock.id,
+							amount: new_amount,
+						}
 					})
 				} else {
 					Some(lock)
@@ -1338,6 +1349,12 @@ impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
 			})
 			.collect::<Vec<_>>();
 		if let Some(lock) = new_lock {
+			Self::deposit_event(Event::LockSet {
+				lock_id,
+				currency_id,
+				who: who.clone(),
+				amount: lock.amount,
+			});
 			locks.push(lock)
 		}
 		Self::update_locks(currency_id, who, &locks[..])
@@ -2400,7 +2417,7 @@ where
 	T: Config,
 	GetCurrencyId: Get<T::CurrencyId>,
 {
-	type Moment = T::BlockNumber;
+	type Moment = BlockNumberFor<T>;
 	type MaxLocks = ();
 
 	fn set_lock(id: LockIdentifier, who: &T::AccountId, amount: Self::Balance, _reasons: WithdrawReasons) {

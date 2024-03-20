@@ -40,10 +40,9 @@ pub fn simulate_execution<R>(f: impl FnOnce() -> Result<R, DispatchError>) -> Re
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use frame_support::{assert_noop, assert_ok, construct_runtime, pallet_prelude::*, traits::Everything};
-	use sp_core::{ConstU64, H256};
+	use frame_support::{assert_noop, assert_ok, construct_runtime, derive_impl, pallet_prelude::*};
 	use sp_io::TestExternalities;
-	use sp_runtime::{testing::Header, traits::IdentityLookup};
+	use sp_runtime::traits::IdentityLookup;
 	use sp_runtime::{DispatchError, DispatchResult};
 	use sp_std::result::Result;
 
@@ -67,44 +66,19 @@ mod tests {
 
 	use module::*;
 
+	#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 	impl frame_system::Config for Runtime {
-		type RuntimeOrigin = RuntimeOrigin;
-		type Index = u64;
-		type BlockNumber = u64;
-		type RuntimeCall = RuntimeCall;
-		type Hash = H256;
-		type Hashing = ::sp_runtime::traits::BlakeTwo256;
 		type AccountId = u128;
 		type Lookup = IdentityLookup<Self::AccountId>;
-		type Header = Header;
-		type RuntimeEvent = RuntimeEvent;
-		type BlockHashCount = ConstU64<250>;
-		type BlockWeights = ();
-		type BlockLength = ();
-		type Version = ();
-		type PalletInfo = PalletInfo;
-		type AccountData = ();
-		type OnNewAccount = ();
-		type OnKilledAccount = ();
-		type DbWeight = ();
-		type BaseCallFilter = Everything;
-		type SystemWeightInfo = ();
-		type SS58Prefix = ();
-		type OnSetCode = ();
-		type MaxConsumers = ConstU32<16>;
+		type Block = Block;
 	}
 
 	impl module::Config for Runtime {}
 
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 	type Block = frame_system::mocking::MockBlock<Runtime>;
 
 	construct_runtime!(
-		pub enum Runtime where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
+		pub enum Runtime {
 			System: frame_system,
 			TestModule: module,
 		}

@@ -19,7 +19,7 @@
 #![allow(clippy::string_lit_as_bytes)]
 #![allow(clippy::unused_unit)]
 
-use codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -141,13 +141,13 @@ pub mod module {
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
 	#[pallet::hooks]
-	impl<T: Config<I>, I: 'static> Hooks<T::BlockNumber> for Pallet<T, I> {
+	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
 		/// `on_initialize` to return the weight used in `on_finalize`.
-		fn on_initialize(_n: T::BlockNumber) -> Weight {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			T::WeightInfo::on_finalize()
 		}
 
-		fn on_finalize(_n: T::BlockNumber) {
+		fn on_finalize(_n: BlockNumberFor<T>) {
 			// cleanup for next block
 			<HasDispatched<T, I>>::kill();
 		}
@@ -186,7 +186,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	pub fn read_raw_values(key: &T::OracleKey) -> Vec<TimestampedValueOf<T, I>> {
 		T::Members::sorted_members()
 			.iter()
-			.chain(vec![T::RootOperatorAccountId::get()].iter())
+			.chain([T::RootOperatorAccountId::get()].iter())
 			.filter_map(|x| Self::raw_values(x, key))
 			.collect()
 	}
